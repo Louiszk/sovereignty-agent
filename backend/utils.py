@@ -112,3 +112,34 @@ def execute_tool_calls(response: BaseMessage, available_tools: Dict[str, BaseToo
             )
 
     return tool_messages
+
+
+def get_chunk_data(chunk_id: str) -> dict:
+    """
+    Retrieves the raw text content and type of a TextChunk by its ID as a dictionary.
+    """
+    from typing import cast, LiteralString
+    
+    if not chunk_id.startswith("CHK-"):
+        chunk_id = f"CHK-{chunk_id}"
+        
+    logger.info(f"Retrieving chunk data for chunk_id: {chunk_id}")
+    query = cast(
+        LiteralString,
+        """
+        MATCH (c:TextChunk {id: $chunk_id})
+        RETURN c.type AS type, c.title AS title, c.content AS content, c.source_file AS source_file
+        """,
+    )
+    with driver.session() as session:
+        result = session.run(query, chunk_id=chunk_id).single()
+
+    if not result:
+        return {}
+
+    return {
+        "title": result.get("title", "Kein Titel"),
+        "type": result["type"],
+        "source_file": result.get("source_file"),
+        "content": result["content"],
+    }

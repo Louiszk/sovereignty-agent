@@ -221,3 +221,60 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* Citation Badge & Modal */
+.citation-badge {
+    background-color: rgba(16, 185, 129, 0.2);
+    color: var(--accent);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-family: monospace;
+    white-space: nowrap;
+}
+
+.citation-badge:hover {
+    background-color: rgba(16, 185, 129, 0.4);
+}
+
+#chunk-modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+#chunk-modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: var(--bg-panel);
+    padding: 24px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    line-height: 1.5;
+}
+
+#close-modal-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 24px;
+    cursor: pointer;
+}
+
+#close-modal-btn:hover {
+    color: var(--text-main);
+}

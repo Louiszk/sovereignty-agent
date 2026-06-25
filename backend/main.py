@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from backend.agent import chat_with_agent
+from backend.utils import get_chunk_data
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,19 @@ async def chat_endpoint(request: ChatRequest):
     except Exception as e:
         logger.error(f"Error during chat generation: {e}", exc_info=True)
         return {"reply": "Ein interner Fehler ist aufgetreten. Bitte siehe in den Docker Logs nach."}
+
+
+@app.get("/api/chunk/{chunk_id}")
+async def get_chunk(chunk_id: str):
+    logger.info(f"Received chunk request for '{chunk_id}'")
+    try:
+        data = get_chunk_data(chunk_id)
+        if not data:
+            return {"error": "Chunk nicht gefunden."}
+        return data
+    except Exception as e:
+        logger.error(f"Error retrieving chunk {chunk_id}: {e}", exc_info=True)
+        return {"error": "Ein Fehler ist aufgetreten."}
 
 
 # Serve HTML frontend

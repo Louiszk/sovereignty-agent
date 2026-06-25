@@ -132,21 +132,16 @@ def get_chunk_content(chunk_id: str) -> str:
     """
     Retrieves the raw text content and type of a TextChunk by its ID.
     """
-    logger.info(f"Retrieving chunk content for chunk_id: {chunk_id}")
-    query = cast(
-        LiteralString,
-        """
-        MATCH (c:TextChunk {id: $chunk_id})
-        RETURN c.type AS type, c.title AS title, c.content AS content
-        """,
-    )
-    with driver.session() as session:
-        result = session.run(query, chunk_id=chunk_id).single()
+    from backend.utils import get_chunk_data
 
-    if not result:
+    logger.info(f"Retrieving chunk content for chunk_id: {chunk_id}")
+    data = get_chunk_data(chunk_id)
+
+    if not data:
         return f"TextChunk mit ID {chunk_id} nicht gefunden."
 
-    return f"Titel: {result.get('title', 'Kein Titel')}\nTyp: {result['type']}\nInhalt: {result['content']}"
+    source_info = f"\nQuelle: {data['source_file']}" if data.get("source_file") else ""
+    return f"Titel: {data.get('title', 'Kein Titel')}\nTyp: {data['type']}{source_info}\nInhalt: {data['content']}"
 
 
 def get_entity_description(entity_id: str) -> str:
@@ -208,6 +203,11 @@ def execute_custom_cypher(query: str) -> str:
             future = executor.submit(_run_query)
             results = future.result(timeout=20.0)
 
+        if not results:
+            return (
+                "Die Cypher-Query wurde erfolgreich ausgeführt, hat aber keine Ergebnisse geliefert (leere Rückgabe)."
+            )
+
         json_output = json.dumps(results, ensure_ascii=False, default=str)
 
         # Check Token Limit using tiktoken (max 80,000 tokens)
@@ -243,7 +243,7 @@ def sparse_search(keywords: list[str]) -> str:
         LiteralString,
         """
         CALL db.index.fulltext.queryNodes("chunk_index", $search_query) YIELD node, score
-        RETURN node.id AS id, node.title AS title, node.type AS type, node.content AS content, score
+        RETURN node.id AS id, node.title AS title, node.type AS type, node.content AS content, node.source_file AS source_file, score
         ORDER BY score DESC
         LIMIT 3
         """,
@@ -268,9 +268,10 @@ def sparse_search(keywords: list[str]) -> str:
         related = conn_res["related_entities"] if conn_res else []
         related_str = f"Verknüpft mit: {', '.join(related)}" if related else "Keine direkten Verknüpfungen"
 
+        source_info = f"\nQuelle: {r['source_file']}" if r.get("source_file") else ""
         formatted_results.append(
             f"Chunk ID: {r['id']} (Score: {r['score']:.2f})\n"
-            f"Titel: {r['title']} ({r['type']})\n"
+            f"Titel: {r['title']} ({r['type']}){source_info}\n"
             f"{related_str}\n"
             f"Inhalt: {r['content']}\n"
         )

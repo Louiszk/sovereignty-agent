@@ -52,8 +52,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Parse markdown for AI responses
         if (role === 'assistant') {
-            const rawHtml = marked.parse(content);
+            const processedContent = content.replace(/\[\[(CHK-[^\]]+)\]\]/g, '<span class="citation-badge" data-chunk="$1">📄 $1</span>');
+            const rawHtml = marked.parse(processedContent);
             contentDiv.innerHTML = DOMPurify.sanitize(rawHtml);
+            
+            // Add event listeners to citations
+            const badges = contentDiv.querySelectorAll('.citation-badge');
+            badges.forEach(badge => {
+                badge.addEventListener('click', () => openModal(badge.getAttribute('data-chunk')));
+            });
         } else {
             contentDiv.textContent = content;
         }
@@ -92,5 +99,46 @@ document.addEventListener('DOMContentLoaded', () => {
         chatContainer.scrollTop = chatContainer.scrollHeight;
         
         return id;
+    }
+
+    const modal = document.getElementById('chunk-modal');
+    const modalBody = document.getElementById('modal-body');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', () => {
+            modal.classList.add('hidden');
+        });
+    }
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.add('hidden');
+        }
+    });
+
+    async function openModal(chunkId) {
+        modal.classList.remove('hidden');
+        modalBody.innerHTML = 'Lade...';
+        try {
+            const res = await fetch(`/api/chunk/${chunkId}`);
+            const data = await res.json();
+            
+            if (data.error) {
+                modalBody.innerHTML = `<div style="color: red;">${data.error}</div>`;
+                return;
+            }
+
+            const sourceText = data.source_file ? ` (${data.source_file})` : '';
+            
+            modalBody.innerHTML = `
+                <h2 style="color: #ffffff; margin-top: 0; margin-bottom: 5px;">${data.title}</h2>
+                <div style="color: #cccccc; margin-bottom: 20px; font-size: 0.9em;">${data.type}${sourceText}</div>
+                <div style="color: #ffffff; line-height: 1.5; white-space: pre-wrap;">${data.content}</div>
+            `;
+        } catch (e) {
+            modalBody.textContent = 'Fehler beim Laden des Chunks.';
+            console.error(e);
+        }
     }
 });
