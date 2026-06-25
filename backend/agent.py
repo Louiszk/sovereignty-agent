@@ -5,10 +5,10 @@ from backend.tools import (
     execute_custom_cypher,
     sparse_search,
 )
-from backend.utils import get_dynamic_schema
+from backend.utils import get_dynamic_schema, execute_tool_calls
 from typing import Annotated, TypedDict
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.tools import tool
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph, START, END
@@ -98,20 +98,10 @@ def call_tools(state: AgentState):
     messages = state.get("messages", [])
     last_message = messages[-1] if messages else None
 
-    tool_responses = []
-    # Explicitly handle each tool call without prebuilts
-    for tool_call in getattr(last_message, "tool_calls", []):
-        logger.info(f"Executing tool '{tool_call['name']}' with args: {tool_call['args']}")
-        action = tool_map[tool_call["name"]]
-        response = action.invoke(tool_call["args"])
-        logger.info(f"Tool '{tool_call['name']}' returned:\n{response}")
-        tool_responses.append(
-            ToolMessage(
-                content=str(response),
-                name=tool_call["name"],
-                tool_call_id=tool_call["id"],
-            )
-        )
+    if not last_message:
+        return {"messages": []}
+
+    tool_responses = execute_tool_calls(last_message, tool_map)
     return {"messages": tool_responses}
 
 
