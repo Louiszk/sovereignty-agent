@@ -3,126 +3,124 @@
     {
       "id": "SVC-1",
       "label": "Service",
-      "properties": {
-        "name": "Core Banking API",
-        "criticality": "High",
-        "business_domain": "Payments"
-      }
+      "properties": { "name": "Core Banking API", "criticality": "High", "business_domain": "Payments" }
     },
     {
       "id": "SVC-2",
       "label": "Service",
-      "properties": {
-        "name": "HR Portal",
-        "criticality": "Medium",
-        "business_domain": "Human Resources"
-      }
+      "properties": { "name": "HR Portal", "criticality": "Medium", "business_domain": "Human Resources" }
     },
     {
       "id": "SVC-3",
       "label": "Service",
-      "properties": {
-        "name": "Risk Data Lake",
-        "criticality": "High",
-        "business_domain": "Risk & Compliance"
-      }
+      "properties": { "name": "Risk Data Lake", "criticality": "High", "business_domain": "Risk & Compliance" }
+    },
+    {
+      "id": "SVC-4",
+      "label": "Service",
+      "properties": { "name": "Mobile Banking App", "criticality": "High", "business_domain": "Customer Facing" }
+    },
+    {
+      "id": "SVC-5",
+      "label": "Service",
+      "properties": { "name": "Payment Gateway", "criticality": "High", "business_domain": "Payments" }
+    },
+    {
+      "id": "DB-1",
+      "label": "Database",
+      "properties": { "name": "Customer Postgres DB", "criticality": "High", "business_domain": "Core Data" }
+    },
+    {
+      "id": "DB-2",
+      "label": "Database",
+      "properties": { "name": "HR MongoDB", "criticality": "Medium", "business_domain": "Human Resources" }
     },
     {
       "id": "PROV-1",
       "label": "Provider",
-      "properties": {
-        "name": "Amazon Web Services (AWS)",
-        "hq_country": "USA",
-        "provider_type": "Cloud"
-      }
+      "properties": { "name": "Amazon Web Services (AWS)", "hq_country": "USA", "provider_type": "Cloud" }
     },
     {
       "id": "PROV-2",
       "label": "Provider",
-      "properties": {
-        "name": "EU-SecCloud GmbH",
-        "hq_country": "Germany",
-        "provider_type": "Cloud"
-      }
+      "properties": { "name": "EU-SecCloud GmbH", "hq_country": "Germany", "provider_type": "Cloud" }
+    },
+    {
+      "id": "PROV-3",
+      "label": "Provider",
+      "properties": { "name": "Microsoft Azure", "hq_country": "USA", "provider_type": "Cloud" }
+    },
+    {
+      "id": "PROV-4",
+      "label": "Provider",
+      "properties": { "name": "On-Premise Frankfurt", "hq_country": "Germany", "provider_type": "Datacenter" }
     },
     {
       "id": "CHK-101",
       "label": "TextChunk",
-      "properties": {
-        "type": "Contract Clause",
-        "content": "AWS Rahmenvertrag 2023: Die Kündigungsfrist für Core-Infrastruktur beträgt 24 Monate. Bei geopolitischen Sanktionen behält sich der Provider das Recht vor, Services innerhalb von 48 Stunden temporär zu suspendieren. Gerichtsstand ist Delaware, USA."
-      }
+      "properties": { "title": "AWS Rahmenvertrag Kündigung", "type": "Contract Clause", "content": "AWS Rahmenvertrag 2023: Die Kündigungsfrist für Core-Infrastruktur beträgt 24 Monate. Bei geopolitischen Sanktionen behält sich der Provider das Recht vor, Services temporär zu suspendieren." }
     },
     {
       "id": "CHK-102",
       "label": "TextChunk",
-      "properties": {
-        "type": "Compliance Policy",
-        "content": "Interne Richtlinie zur Datenhaltung: HR-Daten dürfen ausschließlich auf Servern innerhalb der Europäischen Union gespeichert werden. Ausnahmen erfordern eine Vorstandszulassung."
-      }
+      "properties": { "title": "HR Datenresidenz Policy", "type": "Compliance Policy", "content": "Interne Richtlinie: HR-Daten dürfen ausschließlich auf Servern innerhalb der Europäischen Union gespeichert werden." }
+    },
+    {
+      "id": "CHK-103",
+      "label": "TextChunk",
+      "properties": { "title": "Azure Migration ADR", "type": "Architecture Decision Record", "content": "ADR-042: Customer DB is migrated to Azure East US region to leverage specialized managed services, introducing a high vendor lock-in." }
+    },
+    {
+      "id": "CHK-SVC1-DESC",
+      "label": "TextChunk",
+      "properties": { "title": "SVC-1 Systembeschreibung", "type": "System Description", "content": "Die Core Banking API ist ein geschäftskritischer Microservice, geschrieben in Java, der Transaktionen verarbeitet." }
+    },
+    {
+      "id": "CHK-SVC2-DESC",
+      "label": "TextChunk",
+      "properties": { "title": "SVC-2 Systembeschreibung", "type": "System Description", "content": "Das HR Portal ist eine interne Webanwendung zur Verwaltung von Personaldaten und Urlaubstagen." }
+    },
+    {
+      "id": "CHK-SVC3-DESC",
+      "label": "TextChunk",
+      "properties": { "title": "SVC-3 Systembeschreibung", "type": "System Description", "content": "Der Risk Data Lake aggregiert globale Risikodaten für das Management Reporting." }
+    },
+    {
+      "id": "CHK-PROV1-DESC",
+      "label": "TextChunk",
+      "properties": { "title": "AWS Providerprofil", "type": "Provider Description", "content": "Amazon Web Services (AWS) ist ein US-amerikanischer Cloud-Provider, der IaaS und PaaS Dienste global anbietet." }
+    },
+    {
+      "id": "CHK-PROV2-DESC",
+      "label": "TextChunk",
+      "properties": { "title": "EU-SecCloud Providerprofil", "type": "Provider Description", "content": "EU-SecCloud GmbH ist ein deutscher Spezial-Provider für hochsichere Cloud-Infrastruktur im Finanzsektor." }
     }
   ],
   "edges": [
-    {
-      "source": "SVC-1",
-      "target": "PROV-1",
-      "label": "RUNS_ON",
-      "properties": {
-        "lock_in_level": "High",
-        "data_residency": "EU",
-        "provenance_chunk_id": "CHK-101"
-      }
-    },
-    {
-      "source": "SVC-2",
-      "target": "PROV-1",
-      "label": "RUNS_ON",
-      "properties": {
-        "lock_in_level": "Medium",
-        "data_residency": "USA",
-        "provenance_chunk_id": "CHK-102"
-      }
-    },
-    {
-      "source": "SVC-3",
-      "target": "PROV-2",
-      "label": "RUNS_ON",
-      "properties": {
-        "lock_in_level": "Low",
-        "data_residency": "EU"
-      }
-    },
-    {
-      "source": "SVC-1",
-      "target": "SVC-3",
-      "label": "DEPENDS_ON",
-      "properties": {
-        "integration_type": "API"
-      }
-    },
-    {
-      "source": "CHK-101",
-      "target": "PROV-1",
-      "label": "RELATES_TO",
-      "properties": {}
-    },
-    {
-      "source": "CHK-102",
-      "target": "SVC-2",
-      "label": "RELATES_TO",
-      "properties": {}
-    },
-    {
-      "source": "CHK-101",
-      "target": "SVC-1",
-      "label": "RELATES_TO",
-      "properties": {}
-    },
-    {
-      "source": "CHK-102",
-      "target": "PROV-1",
-      "label": "RELATES_TO",
-      "properties": {}
-    }
+    { "source": "SVC-4", "target": "SVC-5", "label": "DEPENDS_ON", "properties": { "lock_in_level": "Low", "data_residency": "EU" } },
+    { "source": "SVC-5", "target": "SVC-1", "label": "DEPENDS_ON", "properties": { "lock_in_level": "Medium", "data_residency": "EU" } },
+    { "source": "SVC-1", "target": "DB-1", "label": "DEPENDS_ON", "properties": { "lock_in_level": "High", "data_residency": "USA" } },
+    { "source": "SVC-1", "target": "PROV-1", "label": "RUNS_ON", "properties": { "lock_in_level": "High", "data_residency": "EU", "contract_duration_months": 24, "provenance_chunk_id": "CHK-101" } },
+    { "source": "DB-1", "target": "PROV-3", "label": "RUNS_ON", "properties": { "lock_in_level": "High", "data_residency": "USA", "provenance_chunk_id": "CHK-103" } },
+    
+    { "source": "SVC-2", "target": "DB-2", "label": "DEPENDS_ON", "properties": { "lock_in_level": "Low", "data_residency": "EU" } },
+    { "source": "DB-2", "target": "PROV-4", "label": "RUNS_ON", "properties": { "lock_in_level": "Low", "data_residency": "EU", "provenance_chunk_id": "CHK-102" } },
+    
+    { "source": "SVC-3", "target": "PROV-2", "label": "RUNS_ON", "properties": { "lock_in_level": "Medium", "data_residency": "EU" } },
+    
+    { "source": "CHK-101", "target": "PROV-1", "label": "RELATES_TO", "properties": {} },
+    { "source": "CHK-101", "target": "SVC-1", "label": "RELATES_TO", "properties": {} },
+    
+    { "source": "CHK-102", "target": "DB-2", "label": "RELATES_TO", "properties": {} },
+    { "source": "CHK-102", "target": "PROV-4", "label": "RELATES_TO", "properties": {} },
+    
+    { "source": "CHK-103", "target": "DB-1", "label": "RELATES_TO", "properties": {} },
+    { "source": "CHK-103", "target": "PROV-3", "label": "RELATES_TO", "properties": {} },
+    
+    { "source": "SVC-1", "target": "CHK-SVC1-DESC", "label": "DESCRIBED_BY", "properties": {} },
+    { "source": "SVC-2", "target": "CHK-SVC2-DESC", "label": "DESCRIBED_BY", "properties": {} },
+    { "source": "SVC-3", "target": "CHK-SVC3-DESC", "label": "DESCRIBED_BY", "properties": {} },
+    { "source": "PROV-1", "target": "CHK-PROV1-DESC", "label": "DESCRIBED_BY", "properties": {} },
+    { "source": "PROV-2", "target": "CHK-PROV2-DESC", "label": "DESCRIBED_BY", "properties": {} }
   ]
 }

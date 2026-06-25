@@ -2,11 +2,7 @@ import os
 import json
 from typing import cast, LiteralString
 from neo4j import GraphDatabase
-
-# Load environment variables
-NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
-NEO4J_USER = os.getenv("NEO4J_USER")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
+from backend.config import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
 
 # Path to Graph Data
 DATA_PATH = os.getenv("DATA_PATH", "/app/data/graph_data.json")
@@ -32,7 +28,7 @@ def init_db():
         return
 
     print("Connecting to Neo4j...")
-    driver = GraphDatabase.driver(str(NEO4J_URI), auth=(str(NEO4J_USER), str(NEO4J_PASSWORD)))
+    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 
     nodes = data.get("nodes", [])
     edges = data.get("edges", [])
@@ -62,11 +58,25 @@ def init_db():
             rel_type = edge.get("label", "RELATED_TO")
             props = edge.get("properties", {})
 
-            query = cast(LiteralString, f"""
-            MATCH (a {{id: $source}}), (b {{id: $target}})
+            query = cast(
+                LiteralString,
+                f"""
+            MATCH (a {{id: $source}})
+            MATCH (b {{id: $target}})
             CREATE (a)-[r:{rel_type} $props]->(b)
-            """)
+            """,
+            )
             session.run(query, source=source, target=target, props=props)
+
+        # Create Full-Text Index for Sparse Search
+        print("Creating Full-Text Index for TextChunks...")
+        try:
+            session.run("""
+            CREATE FULLTEXT INDEX chunk_index IF NOT EXISTS 
+            FOR (n:TextChunk) ON EACH [n.title, n.content]
+            """)
+        except Exception as e:
+            print(f"Warning: Index creation failed (might already exist): {e}")
 
     driver.close()
     print("Graph initialized successfully!")
