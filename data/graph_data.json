@@ -1,0 +1,128 @@
+{
+  "nodes": [
+    {
+      "id": "SVC-1",
+      "label": "Service",
+      "properties": {
+        "name": "Core Banking API",
+        "criticality": "High",
+        "business_domain": "Payments"
+      }
+    },
+    {
+      "id": "SVC-2",
+      "label": "Service",
+      "properties": {
+        "name": "HR Portal",
+        "criticality": "Medium",
+        "business_domain": "Human Resources"
+      }
+    },
+    {
+      "id": "SVC-3",
+      "label": "Service",
+      "properties": {
+        "name": "Risk Data Lake",
+        "criticality": "High",
+        "business_domain": "Risk & Compliance"
+      }
+    },
+    {
+      "id": "PROV-1",
+      "label": "Provider",
+      "properties": {
+        "name": "Amazon Web Services (AWS)",
+        "hq_country": "USA",
+        "provider_type": "Cloud"
+      }
+    },
+    {
+      "id": "PROV-2",
+      "label": "Provider",
+      "properties": {
+        "name": "EU-SecCloud GmbH",
+        "hq_country": "Germany",
+        "provider_type": "Cloud"
+      }
+    },
+    {
+      "id": "CHK-101",
+      "label": "TextChunk",
+      "properties": {
+        "type": "Contract Clause",
+        "content": "AWS Rahmenvertrag 2023: Die Kündigungsfrist für Core-Infrastruktur beträgt 24 Monate. Bei geopolitischen Sanktionen behält sich der Provider das Recht vor, Services innerhalb von 48 Stunden temporär zu suspendieren. Gerichtsstand ist Delaware, USA."
+      }
+    },
+    {
+      "id": "CHK-102",
+      "label": "TextChunk",
+      "properties": {
+        "type": "Compliance Policy",
+        "content": "Interne Richtlinie zur Datenhaltung: HR-Daten dürfen ausschließlich auf Servern innerhalb der Europäischen Union gespeichert werden. Ausnahmen erfordern eine Vorstandszulassung."
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "SVC-1",
+      "target": "PROV-1",
+      "label": "RUNS_ON",
+      "properties": {
+        "lock_in_level": "High",
+        "data_residency": "EU",
+        "provenance_chunk_id": "CHK-101"
+      }
+    },
+    {
+      "source": "SVC-2",
+      "target": "PROV-1",
+      "label": "RUNS_ON",
+      "properties": {
+        "lock_in_level": "Medium",
+        "data_residency": "USA",
+        "provenance_chunk_id": "CHK-102"
+      }
+    },
+    {
+      "source": "SVC-3",
+      "target": "PROV-2",
+      "label": "RUNS_ON",
+      "properties": {
+        "lock_in_level": "Low",
+        "data_residency": "EU"
+      }
+    },
+    {
+      "source": "SVC-1",
+      "target": "SVC-3",
+      "label": "DEPENDS_ON",
+      "properties": {
+        "integration_type": "API"
+      }
+    },
+    {
+      "source": "CHK-101",
+      "target": "PROV-1",
+      "label": "RELATES_TO",
+      "properties": {}
+    },
+    {
+      "source": "CHK-102",
+      "target": "SVC-2",
+      "label": "RELATES_TO",
+      "properties": {}
+    },
+    {
+      "source": "CHK-101",
+      "target": "SVC-1",
+      "label": "RELATES_TO",
+      "properties": {}
+    },
+    {
+      "source": "CHK-102",
+      "target": "PROV-1",
+      "label": "RELATES_TO",
+      "properties": {}
+    }
+  ]
+}

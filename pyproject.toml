@@ -1,0 +1,7 @@
+[tool.ruff]
+line-length = 120
+
+[tool.pyright]
+typeCheckingMode = "standard"
+venvPath = "."
+venv = "sovvenv"
