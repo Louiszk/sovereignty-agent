@@ -34,6 +34,7 @@ def calculate_sovereignty_score(entity_id: str) -> str:
             rel: rel,
             target_id: target.id,
             target_name: target.name,
+            target_is_internal: coalesce(target.is_internal, false),
             depth: min_depth,
             source_id: source.id,
             source_name: source.name,
@@ -68,7 +69,11 @@ def calculate_sovereignty_score(entity_id: str) -> str:
     for item in valid_rels:
         rel = item["rel"]
         target_name = item.get("target_name", "Unbekannt")
+        is_internal = item.get("target_is_internal", False)
         depth = item.get("depth", 1)
+
+        ownership_str = "Internes Asset" if is_internal else "Externer Provider/SaaS"
+        target_display = f"{target_name} ({ownership_str})"
 
         chunk_id = rel.get("provenance_chunk_id")
         chunk_ref = f" (Beleg: {chunk_id})" if chunk_id else ""
@@ -83,9 +88,9 @@ def calculate_sovereignty_score(entity_id: str) -> str:
             dimensions["Regulatorik"] *= 1 - effective_risk
             dimensions["Geopolitik"] *= 1 - effective_risk
 
-            red_flags.append(f"Datenresidenz USA bei '{target_name}' (Distanz: {depth}){chunk_ref}")
+            red_flags.append(f"Datenresidenz USA bei '{target_display}' (Distanz: {depth}){chunk_ref}")
             risk_details.append(
-                f"- [Geopolitik/Regulatorik] Daten in den USA bei '{target_name}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
+                f"- [Geopolitik/Regulatorik] Daten in den USA bei '{target_display}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
             )
 
         lock_in = rel.get("lock_in_level")
@@ -93,13 +98,13 @@ def calculate_sovereignty_score(entity_id: str) -> str:
             effective_risk = 0.30 * decay * crit_factor
             dimensions["Lock_In"] *= 1 - effective_risk
             risk_details.append(
-                f"- [Lock-In] Hoher Vendor-Lock-In bei '{target_name}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
+                f"- [Lock-In] Hoher Vendor-Lock-In bei '{target_display}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
             )
         elif lock_in == "Medium":
             effective_risk = 0.10 * decay * crit_factor
             dimensions["Lock_In"] *= 1 - effective_risk
             risk_details.append(
-                f"- [Lock-In] Mittlerer Vendor-Lock-In bei '{target_name}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
+                f"- [Lock-In] Mittlerer Vendor-Lock-In bei '{target_display}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
             )
 
         duration = rel.get("contract_duration_months")
@@ -108,13 +113,13 @@ def calculate_sovereignty_score(entity_id: str) -> str:
                 effective_risk = 0.20 * decay * crit_factor
                 dimensions["Vertrag"] *= 1 - effective_risk
                 risk_details.append(
-                    f"- [Vertrag] Lange Vertragslaufzeit ({duration} Mon.) bei '{target_name}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
+                    f"- [Vertrag] Lange Vertragslaufzeit ({duration} Mon.) bei '{target_display}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
                 )
             elif duration >= 13:
                 effective_risk = 0.10 * decay * crit_factor
                 dimensions["Vertrag"] *= 1 - effective_risk
                 risk_details.append(
-                    f"- [Vertrag] Erhöhte Vertragslaufzeit ({duration} Mon.) bei '{target_name}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
+                    f"- [Vertrag] Erhöhte Vertragslaufzeit ({duration} Mon.) bei '{target_display}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
                 )
 
     overall_score = sum(dimensions[k] * weights[k] for k in dimensions) * 100

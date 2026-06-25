@@ -6,7 +6,8 @@
       "properties": {
         "name": "Core Banking API",
         "criticality": "High",
-        "business_domain": "Payments"
+        "business_domain": "Payments",
+        "is_internal": true
       }
     },
     {
@@ -15,7 +16,8 @@
       "properties": {
         "name": "HR Portal",
         "criticality": "Medium",
-        "business_domain": "Human Resources"
+        "business_domain": "Human Resources",
+        "is_internal": true
       }
     },
     {
@@ -24,7 +26,8 @@
       "properties": {
         "name": "Risk Data Lake",
         "criticality": "High",
-        "business_domain": "Risk & Compliance"
+        "business_domain": "Risk & Compliance",
+        "is_internal": true
       }
     },
     {
@@ -33,7 +36,8 @@
       "properties": {
         "name": "Mobile Banking App",
         "criticality": "High",
-        "business_domain": "Customer Facing"
+        "business_domain": "Customer Facing",
+        "is_internal": true
       }
     },
     {
@@ -42,7 +46,8 @@
       "properties": {
         "name": "Payment Gateway",
         "criticality": "High",
-        "business_domain": "Payments"
+        "business_domain": "Payments",
+        "is_internal": true
       }
     },
     {
@@ -51,7 +56,8 @@
       "properties": {
         "name": "Customer Postgres DB",
         "criticality": "High",
-        "business_domain": "Core Data"
+        "business_domain": "Core Data",
+        "is_internal": true
       }
     },
     {
@@ -60,7 +66,8 @@
       "properties": {
         "name": "HR MongoDB",
         "criticality": "Medium",
-        "business_domain": "Human Resources"
+        "business_domain": "Human Resources",
+        "is_internal": true
       }
     },
     {
@@ -69,7 +76,8 @@
       "properties": {
         "name": "Amazon Web Services (AWS)",
         "hq_country": "USA",
-        "provider_type": "Cloud"
+        "provider_type": "Cloud",
+        "is_internal": false
       }
     },
     {
@@ -78,7 +86,8 @@
       "properties": {
         "name": "EU-SecCloud GmbH",
         "hq_country": "Germany",
-        "provider_type": "Cloud"
+        "provider_type": "Cloud",
+        "is_internal": false
       }
     },
     {
@@ -87,7 +96,8 @@
       "properties": {
         "name": "Microsoft Azure",
         "hq_country": "USA",
-        "provider_type": "Cloud"
+        "provider_type": "Cloud",
+        "is_internal": false
       }
     },
     {
@@ -96,7 +106,8 @@
       "properties": {
         "name": "On-Premise Frankfurt",
         "hq_country": "Germany",
-        "provider_type": "Datacenter"
+        "provider_type": "Datacenter",
+        "is_internal": false
       }
     },
     {
