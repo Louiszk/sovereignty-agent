@@ -4,7 +4,7 @@ import neo4j.exceptions
 import tiktoken
 import concurrent.futures
 from neo4j import GraphDatabase
-from backend.config import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, METRIC_CONFIGS
+from backend.config import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, CYPHER_RECURSION_LIMIT
 import logging
 
 logger = logging.getLogger(__name__)
@@ -15,116 +15,127 @@ driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 
 def calculate_sovereignty_score(entity_id: str) -> str:
     """
-    Calculates the digital sovereignty score for an entity.
-    Collects all edges in the dependency tree and cumulates the
-    risk metadata stored there into a deterministic score.
+    Calculates the digital sovereignty score for an entity using a multiplicative model
+    with depth decay and criticality weighting.
     """
     logger.info(f"Calculating sovereignty score for entity_id: {entity_id}")
-    # Cypher: Find the entity, traverse all dependencies and collect all UNIQUE edges
     query = cast(
         LiteralString,
-        """
-        MATCH (s {id: $entity_id})
-        WHERE NOT 'TextChunk' IN labels(s)
-        OPTIONAL MATCH path = (s)-[:DEPENDS_ON|RUNS_ON*1..]->()
-        UNWIND relationships(path) AS rel
-        WITH s.name AS entity_name, rel, startNode(rel) AS source, endNode(rel) AS target
-        RETURN entity_name, collect(DISTINCT {
-            rel: rel, 
-            source_id: source.id, 
-            source_name: source.name,
-            source_labels: labels(source),
-            target_id: target.id, 
+        f"""
+        MATCH path = (s {{id: $entity_id}})-[:DEPENDS_ON|RUNS_ON*1..{CYPHER_RECURSION_LIMIT}]->(target)
+        WHERE NOT 'TextChunk' IN labels(s) AND NOT 'TextChunk' IN labels(target)
+        WITH s.name AS entity_name, 
+             last(relationships(path)) AS rel, 
+             length(path) AS depth, 
+             startNode(last(relationships(path))) AS source, 
+             target
+        WITH entity_name, rel, source, target, min(depth) AS min_depth
+        RETURN entity_name, collect(DISTINCT {{
+            rel: rel,
+            target_id: target.id,
             target_name: target.name,
-            target_labels: labels(target)
-        }) AS distinct_rels
+            depth: min_depth,
+            source_id: source.id,
+            source_name: source.name,
+            source_criticality: source.criticality
+        }}) AS distinct_rels
         """,
     )
 
     with driver.session() as session:
         result = session.run(query, entity_id=entity_id).single()
 
-    # Fallback if the entity exists but has no outgoing edges
     if not result:
-        # Check if the entity exists at all
         check_query = cast(LiteralString, "MATCH (s {id: $entity_id}) WHERE NOT s:TextChunk RETURN s.name AS name")
         with driver.session() as session:
             check = session.run(check_query, entity_id=entity_id).single()
         if check:
-            return f"Souveränitäts-Score für {check['name']}: 100/100\nKeine Abhängigkeiten gefunden."
+            return f"Souveränitäts-Score für {check['name']}: 100.0/100\nKeine Abhängigkeiten gefunden."
         return f"Entity mit ID {entity_id} nicht gefunden."
 
     entity_name = result["entity_name"]
     rels = result["distinct_rels"]
 
-    # Base score
-    score = 100
-    penalties = []
+    dimensions = {"Regulatorik": 1.0, "Geopolitik": 1.0, "Lock_In": 1.0, "Vertrag": 1.0}
+    weights = {"Regulatorik": 0.3, "Geopolitik": 0.3, "Lock_In": 0.2, "Vertrag": 0.2}
 
-    # Track the worst penalty found per property to avoid double counting
-    worst_penalties = {
-        config["property"]: {"penalty": 0, "msg": "", "chunk_id": None, "source_info": None, "target_info": None}
-        for config in METRIC_CONFIGS
-    }
+    red_flags = []
+    risk_details = []
 
-    # Scan all edges in the subgraph to find the worst-case risks
-    for item in rels:
-        if item is None or item.get("rel") is None:
-            continue
+    valid_rels = [r for r in rels if r and r.get("rel")]
+    valid_rels.sort(key=lambda x: x.get("depth", 1))
 
+    for item in valid_rels:
         rel = item["rel"]
+        target_name = item.get("target_name", "Unbekannt")
+        depth = item.get("depth", 1)
+
         chunk_id = rel.get("provenance_chunk_id")
+        chunk_ref = f" (Beleg: {chunk_id})" if chunk_id else ""
 
-        for config in METRIC_CONFIGS:
-            prop = config["property"]
-            val = rel.get(prop)
-            if val is None:
-                continue
+        decay = 0.8 ** (depth - 1)
+        crit_str = item.get("source_criticality", "High")
+        crit_factor = 1.0 if crit_str == "High" else (0.6 if crit_str == "Medium" else 0.3)
 
-            # Evaluate rules (ordered by severity)
-            for rule in config["rules"]:
-                matched = False
-                if config["is_numeric"] and isinstance(val, (int, float)):
-                    if val >= rule["min_val"]:
-                        matched = True
-                elif not config["is_numeric"]:
-                    if val == rule["match"]:
-                        matched = True
+        residency = rel.get("data_residency")
+        if residency == "USA":
+            effective_risk = 0.40 * decay * crit_factor
+            dimensions["Regulatorik"] *= 1 - effective_risk
+            dimensions["Geopolitik"] *= 1 - effective_risk
 
-                if matched:
-                    if rule["penalty"] > worst_penalties[prop]["penalty"]:
-                        msg = rule["msg"].replace("{val}", str(val))
-                        source_lbl = item["source_labels"][0] if item["source_labels"] else "Unknown"
-                        target_lbl = item["target_labels"][0] if item["target_labels"] else "Unknown"
+            red_flags.append(f"Datenresidenz USA bei '{target_name}' (Distanz: {depth}){chunk_ref}")
+            risk_details.append(
+                f"- [Geopolitik/Regulatorik] Daten in den USA bei '{target_name}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
+            )
 
-                        worst_penalties[prop] = {
-                            "penalty": rule["penalty"],
-                            "msg": msg,
-                            "chunk_id": chunk_id,
-                            "source_info": f"{source_lbl} '{item.get('source_name', 'Unknown')}' ({item.get('source_id', 'Unknown')})",
-                            "target_info": f"{target_lbl} '{item.get('target_name', 'Unknown')}' ({item.get('target_id', 'Unknown')})",
-                        }
-                    break
+        lock_in = rel.get("lock_in_level")
+        if lock_in == "High":
+            effective_risk = 0.30 * decay * crit_factor
+            dimensions["Lock_In"] *= 1 - effective_risk
+            risk_details.append(
+                f"- [Lock-In] Hoher Vendor-Lock-In bei '{target_name}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
+            )
+        elif lock_in == "Medium":
+            effective_risk = 0.10 * decay * crit_factor
+            dimensions["Lock_In"] *= 1 - effective_risk
+            risk_details.append(
+                f"- [Lock-In] Mittlerer Vendor-Lock-In bei '{target_name}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
+            )
 
-    # Apply all collected worst-case penalties
-    for prop, data in worst_penalties.items():
-        if data["penalty"] > 0:
-            score -= data["penalty"]
-            ref = f" (Beleg: {data['chunk_id']})" if data["chunk_id"] else ""
-            path_info = f" [Gefunden zwischen {data['source_info']} und {data['target_info']}]"
-            penalties.append(f"-{data['penalty']} Pkt: {data['msg']}{path_info}{ref}")
+        duration = rel.get("contract_duration_months")
+        if duration is not None:
+            if duration >= 24:
+                effective_risk = 0.20 * decay * crit_factor
+                dimensions["Vertrag"] *= 1 - effective_risk
+                risk_details.append(
+                    f"- [Vertrag] Lange Vertragslaufzeit ({duration} Mon.) bei '{target_name}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
+                )
+            elif duration >= 13:
+                effective_risk = 0.10 * decay * crit_factor
+                dimensions["Vertrag"] *= 1 - effective_risk
+                risk_details.append(
+                    f"- [Vertrag] Erhöhte Vertragslaufzeit ({duration} Mon.) bei '{target_name}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
+                )
 
-    # Normalize score (not below 0)
-    score = max(0, score)
+    overall_score = sum(dimensions[k] * weights[k] for k in dimensions) * 100
 
-    # Format report
-    report = f"Souveränitäts-Score für {entity_name}: {score}/100\n"
-    if penalties:
-        report += "Identifizierte Risikofaktoren auf den Kanten:\n" + "\n".join(penalties)
+    # Report formatieren
+    report = f"Souveränitäts-Score für {entity_name}: {overall_score:.1f}/100\n"
+
+    report += "\nDimensionen:"
+    for k, v in dimensions.items():
+        report += f"\n- {k}: {v * 100:.1f}/100"
+
+    if red_flags:
+        unique_flags = sorted(list(set(red_flags)))
+        report += "\n\nKritische Risiken:\n" + "\n".join(f"- {flag}" for flag in unique_flags)
+
+    if risk_details:
+        report += "\n\nDetail-Auswertung der Architektur:\n" + "\n".join(risk_details)
     else:
-        report += "Keine kritischen Souveränitätsrisiken in den Abhängigkeiten identifiziert."
+        report += "\n\nDetail-Auswertung: Keine souveränitätsmindernden Abhängigkeiten identifiziert."
 
-    logger.info(f"Score for {entity_id} calculated as {score} with {len(penalties)} penalties.")
+    logger.info(f"Score for {entity_id} calculated as {overall_score:.1f}")
     return report
 
 

@@ -119,10 +119,10 @@ def get_chunk_data(chunk_id: str) -> dict:
     Retrieves the raw text content and type of a TextChunk by its ID as a dictionary.
     """
     from typing import cast, LiteralString
-    
+
     if not chunk_id.startswith("CHK-"):
         chunk_id = f"CHK-{chunk_id}"
-        
+
     logger.info(f"Retrieving chunk data for chunk_id: {chunk_id}")
     query = cast(
         LiteralString,
