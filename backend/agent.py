@@ -3,7 +3,7 @@ from backend.tools import (
     get_chunk_content,
     get_entity_description,
     execute_custom_cypher,
-    sparse_search,
+    keyword_search,
 )
 from backend.utils import get_dynamic_schema, execute_tool_calls
 from backend.prompts import get_system_prompt
@@ -67,15 +67,24 @@ def execute_cypher_query(query: str) -> str:
 
 
 @tool
-def search_chunks(keywords: list[str]) -> str:
+def sparse_search(keywords: list[str]) -> str:
     """
     Nutze dieses Tool, um in unstrukturierten Texten (Verträgen, Policys, Architektur-Entscheidungen) nach Stichworten zu suchen.
     Beispiel-Keywords: ['Kündigungsfrist', 'Sanktionen', 'Datenresidenz', 'Migration'] oder auch englische Begriffe.
     """
-    return sparse_search(keywords)
+    return keyword_search(keywords)
 
 
-tools = [get_entity_score, read_evidence_chunk, read_entity_description, execute_cypher_query, search_chunks]
+# TODO: Implement dense vector search using embeddings
+# @tool
+# def dense_search(query: str) -> str:
+#     """
+#     Nutze dieses Tool, um eine semantische Suche (Vector Search) in Texten durchzuführen.
+#     """
+#     # return vector_search(query)
+#     pass
+
+tools = [get_entity_score, read_evidence_chunk, read_entity_description, execute_cypher_query, sparse_search]
 tool_map = {tool.name: tool for tool in tools}
 
 # Initialize LLM and bind tools

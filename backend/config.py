@@ -9,11 +9,13 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(sys.stdout)],
 )
 
-# Default to localhost for local testing.
+# Silence Neo4j schema warnings
+logging.getLogger("neo4j.notifications").setLevel(logging.ERROR)
+
 # Inside Docker, docker-compose.yml overrides NEO4J_URI to "bolt://neo4j:7687"
 NEO4J_URI = str(os.environ.get("NEO4J_URI", "bolt://localhost:7687"))
 NEO4J_USER = str(os.environ.get("NEO4J_USER"))
 NEO4J_PASSWORD = str(os.environ.get("NEO4J_PASSWORD"))
 
-CYPHER_RECURSION_LIMIT = 8
+CYPHER_DEPTH_LIMIT = 8
 AGENT_RECURSION_LIMIT = 15

@@ -4,7 +4,7 @@ import neo4j.exceptions
 import tiktoken
 import concurrent.futures
 from neo4j import GraphDatabase
-from backend.config import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, CYPHER_RECURSION_LIMIT
+from backend.config import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, CYPHER_DEPTH_LIMIT
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ def calculate_sovereignty_score(entity_id: str) -> str:
     query = cast(
         LiteralString,
         f"""
-        MATCH path = (s {{id: $entity_id}})-[:DEPENDS_ON|RUNS_ON*1..{CYPHER_RECURSION_LIMIT}]->(target)
+        MATCH path = (s {{id: $entity_id}})-[:DEPENDS_ON|RUNS_ON*1..{CYPHER_DEPTH_LIMIT}]->(target)
         WHERE NOT 'TextChunk' IN labels(s) AND NOT 'TextChunk' IN labels(target)
         WITH s.name AS entity_name, 
              last(relationships(path)) AS rel, 
@@ -59,6 +59,7 @@ def calculate_sovereignty_score(entity_id: str) -> str:
 
     dimensions = {"Regulatorik": 1.0, "Geopolitik": 1.0, "Lock_In": 1.0, "Vertrag": 1.0}
     weights = {"Regulatorik": 0.3, "Geopolitik": 0.3, "Lock_In": 0.2, "Vertrag": 0.2}
+    decay_bases = {"Regulatorik": 0.8, "Geopolitik": 0.8, "Lock_In": 0.6, "Vertrag": 0.6}
 
     red_flags = []
     risk_details = []
@@ -78,7 +79,7 @@ def calculate_sovereignty_score(entity_id: str) -> str:
         chunk_id = rel.get("provenance_chunk_id")
         chunk_ref = f" (Beleg: {chunk_id})" if chunk_id else ""
 
-        decay = 0.8 ** (depth - 1)
+        decays = {k: v ** (depth - 1) for k, v in decay_bases.items()}
         crit_str = item.get("source_criticality", "High")
         crit_factor = 1.0 if crit_str == "High" else (0.6 if crit_str == "Medium" else 0.3)
 
@@ -91,24 +92,33 @@ def calculate_sovereignty_score(entity_id: str) -> str:
 
         residency = rel.get("data_residency")
         if residency == "USA":
-            effective_risk = 0.40 * decay * crit_factor * dep_factor
+            effective_risk = 0.40 * decays["Regulatorik"] * crit_factor * dep_factor
             dimensions["Regulatorik"] *= 1 - effective_risk
-            dimensions["Geopolitik"] *= 1 - effective_risk
 
             red_flags.append(f"Datenresidenz USA bei '{target_display}' (Distanz: {depth}){chunk_ref}")
             risk_details.append(
-                f"- [Geopolitik/Regulatorik] Daten in den USA bei '{target_display}' (Tiefe {depth}, Modus: {dep_mode}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
+                f"- [Regulatorik] Daten in den USA bei '{target_display}' (Tiefe {depth}, Modus: {dep_mode}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
+            )
+            
+        jurisdiction = rel.get("jurisdiction")
+        if jurisdiction == "USA":
+            effective_risk = 0.40 * decays["Geopolitik"] * crit_factor * dep_factor
+            dimensions["Geopolitik"] *= 1 - effective_risk
+
+            red_flags.append(f"US-Jurisdiktion (z.B. CLOUD Act) bei '{target_display}' (Distanz: {depth}){chunk_ref}")
+            risk_details.append(
+                f"- [Geopolitik] US-Jurisdiktion bei '{target_display}' (Tiefe {depth}, Modus: {dep_mode}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
             )
 
         lock_in = rel.get("lock_in_level")
         if lock_in == "High":
-            effective_risk = 0.30 * decay * crit_factor * dep_factor
+            effective_risk = 0.30 * decays["Lock_In"] * crit_factor * dep_factor
             dimensions["Lock_In"] *= 1 - effective_risk
             risk_details.append(
                 f"- [Lock-In] Hoher Vendor-Lock-In bei '{target_display}' (Tiefe {depth}, Modus: {dep_mode}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
             )
         elif lock_in == "Medium":
-            effective_risk = 0.10 * decay * crit_factor * dep_factor
+            effective_risk = 0.10 * decays["Lock_In"] * crit_factor * dep_factor
             dimensions["Lock_In"] *= 1 - effective_risk
             risk_details.append(
                 f"- [Lock-In] Mittlerer Vendor-Lock-In bei '{target_display}' (Tiefe {depth}, Modus: {dep_mode}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
@@ -117,13 +127,13 @@ def calculate_sovereignty_score(entity_id: str) -> str:
         duration = rel.get("contract_duration_months")
         if duration is not None:
             if duration >= 24:
-                effective_risk = 0.20 * decay * crit_factor * dep_factor
+                effective_risk = 0.20 * decays["Vertrag"] * crit_factor * dep_factor
                 dimensions["Vertrag"] *= 1 - effective_risk
                 risk_details.append(
                     f"- [Vertrag] Lange Vertragslaufzeit ({duration} Mon.) bei '{target_display}' (Tiefe {depth}, Modus: {dep_mode}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
                 )
             elif duration >= 13:
-                effective_risk = 0.10 * decay * crit_factor * dep_factor
+                effective_risk = 0.10 * decays["Vertrag"] * crit_factor * dep_factor
                 dimensions["Vertrag"] *= 1 - effective_risk
                 risk_details.append(
                     f"- [Vertrag] Erhöhte Vertragslaufzeit ({duration} Mon.) bei '{target_display}' (Tiefe {depth}, Modus: {dep_mode}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
@@ -257,7 +267,7 @@ def execute_custom_cypher(query: str) -> str:
         return f"FEHLER bei der Ausführung: {e}"
 
 
-def sparse_search(keywords: list[str]) -> str:
+def keyword_search(keywords: list[str]) -> str:
     """
     Executes a full-text search (Sparse Search / BM25) across all documents and contracts.
     Returns the most relevant TextChunks based on the provided keywords.
@@ -306,3 +316,15 @@ def sparse_search(keywords: list[str]) -> str:
         )
 
     return "\n---\n".join(formatted_results)
+
+
+# TODO: Implement Dense Search (Vector Search)
+# def vector_search(query: str) -> str:
+#     """
+#     Executes a semantic vector search across document embeddings.
+#     Requires an embedding model (e.g., text-embedding-3-small) and vector index setup in Neo4j.
+#     """
+#     # 1. Generate embedding for the query string
+#     # 2. CALL db.index.vector.queryNodes("vector_index", 3, $query_embedding) YIELD node, score
+#     # 3. RETURN the most similar chunks and their scores
+#     pass

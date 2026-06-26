@@ -203,7 +203,8 @@
       "properties": {
         "lock_in_level": "Low",
         "data_residency": "EU",
-        "dependency_mode": "optional"
+        "dependency_mode": "optional",
+        "jurisdiction": "EU"
       }
     },
     {
@@ -213,7 +214,8 @@
       "properties": {
         "lock_in_level": "Medium",
         "data_residency": "EU",
-        "dependency_mode": "required"
+        "dependency_mode": "required",
+        "jurisdiction": "EU"
       }
     },
     {
@@ -223,7 +225,8 @@
       "properties": {
         "lock_in_level": "High",
         "data_residency": "USA",
-        "dependency_mode": "required"
+        "dependency_mode": "required",
+        "jurisdiction": "USA"
       }
     },
     {
@@ -235,7 +238,8 @@
         "data_residency": "EU",
         "contract_duration_months": 24,
         "provenance_chunk_id": "CHK-101",
-        "dependency_mode": "required"
+        "dependency_mode": "required",
+        "jurisdiction": "USA"
       }
     },
     {
@@ -246,7 +250,8 @@
         "lock_in_level": "High",
         "data_residency": "USA",
         "provenance_chunk_id": "CHK-103",
-        "dependency_mode": "required"
+        "dependency_mode": "required",
+        "jurisdiction": "USA"
       }
     },
     {
@@ -256,7 +261,8 @@
       "properties": {
         "lock_in_level": "Low",
         "data_residency": "EU",
-        "dependency_mode": "degraded"
+        "dependency_mode": "degraded",
+        "jurisdiction": "EU"
       }
     },
     {
@@ -267,7 +273,8 @@
         "lock_in_level": "Low",
         "data_residency": "EU",
         "provenance_chunk_id": "CHK-102",
-        "dependency_mode": "required"
+        "dependency_mode": "required",
+        "jurisdiction": "EU"
       }
     },
     {
@@ -277,7 +284,8 @@
       "properties": {
         "lock_in_level": "Medium",
         "data_residency": "EU",
-        "dependency_mode": "required"
+        "dependency_mode": "required",
+        "jurisdiction": "EU"
       }
     },
     {
@@ -353,7 +361,8 @@
       "properties": {
         "lock_in_level": "Low",
         "data_residency": "EU",
-        "dependency_mode": "fallback"
+        "dependency_mode": "fallback",
+        "jurisdiction": "EU"
       }
     }
   ]
