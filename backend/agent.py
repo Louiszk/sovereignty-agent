@@ -12,6 +12,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_core.tools import tool
 from langchain_core.runnables import RunnableConfig
+from backend.config import AGENT_RECURSION_LIMIT
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langgraph.checkpoint.memory import MemorySaver
@@ -142,7 +143,7 @@ def chat_with_agent(user_message: str, session_id: str = "default") -> str:
         id="system_prompt",
     )
 
-    config = RunnableConfig(configurable={"thread_id": session_id}, recursion_limit=8)
+    config = RunnableConfig(configurable={"thread_id": session_id}, recursion_limit=AGENT_RECURSION_LIMIT)
 
     # Token count check using o200k_base before invoking
     state = agent_executor.get_state(config)
@@ -167,8 +168,8 @@ def chat_with_agent(user_message: str, session_id: str = "default") -> str:
         logger.error(f"Agent execution timed out after 120s for session '{session_id}'")
         return "FEHLER: Der Agent hat zu lange für eine Antwort gebraucht (Timeout nach 120 Sekunden). Bitte versuche es noch einmal."
     except GraphRecursionError:
-        logger.error(f"Agent hit recursion limit (8) for session '{session_id}'")
-        return "FEHLER: Der Agent hat das interne Iterations-Limit erreicht (zu viele Tool-Aufrufe hintereinander). Bitte teile deine Anfrage in kleinere, spezifischere Fragen auf."
+        logger.error(f"Agent hit recursion limit ({AGENT_RECURSION_LIMIT}) for session '{session_id}'")
+        return "FEHLER: Der Agent hat das interne Iterations-Limit erreicht. Bitte teile deine Anfrage in kleinere, spezifischere Fragen auf."
     except Exception as e:
         logger.error(f"Agent execution error: {e}", exc_info=True)
         return "FEHLER: Bei der Verarbeitung deiner Anfrage ist ein unerwartetes Problem aufgetreten."

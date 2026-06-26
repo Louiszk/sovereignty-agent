@@ -82,44 +82,51 @@ def calculate_sovereignty_score(entity_id: str) -> str:
         crit_str = item.get("source_criticality", "High")
         crit_factor = 1.0 if crit_str == "High" else (0.6 if crit_str == "Medium" else 0.3)
 
+        dep_mode = rel.get("dependency_mode", "required")
+        dep_factor = (
+            1.0
+            if dep_mode == "required"
+            else (0.7 if dep_mode == "degraded" else (0.3 if dep_mode == "optional" else 0.1))
+        )
+
         residency = rel.get("data_residency")
         if residency == "USA":
-            effective_risk = 0.40 * decay * crit_factor
+            effective_risk = 0.40 * decay * crit_factor * dep_factor
             dimensions["Regulatorik"] *= 1 - effective_risk
             dimensions["Geopolitik"] *= 1 - effective_risk
 
             red_flags.append(f"Datenresidenz USA bei '{target_display}' (Distanz: {depth}){chunk_ref}")
             risk_details.append(
-                f"- [Geopolitik/Regulatorik] Daten in den USA bei '{target_display}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
+                f"- [Geopolitik/Regulatorik] Daten in den USA bei '{target_display}' (Tiefe {depth}, Modus: {dep_mode}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
             )
 
         lock_in = rel.get("lock_in_level")
         if lock_in == "High":
-            effective_risk = 0.30 * decay * crit_factor
+            effective_risk = 0.30 * decay * crit_factor * dep_factor
             dimensions["Lock_In"] *= 1 - effective_risk
             risk_details.append(
-                f"- [Lock-In] Hoher Vendor-Lock-In bei '{target_display}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
+                f"- [Lock-In] Hoher Vendor-Lock-In bei '{target_display}' (Tiefe {depth}, Modus: {dep_mode}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
             )
         elif lock_in == "Medium":
-            effective_risk = 0.10 * decay * crit_factor
+            effective_risk = 0.10 * decay * crit_factor * dep_factor
             dimensions["Lock_In"] *= 1 - effective_risk
             risk_details.append(
-                f"- [Lock-In] Mittlerer Vendor-Lock-In bei '{target_display}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
+                f"- [Lock-In] Mittlerer Vendor-Lock-In bei '{target_display}' (Tiefe {depth}, Modus: {dep_mode}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
             )
 
         duration = rel.get("contract_duration_months")
         if duration is not None:
             if duration >= 24:
-                effective_risk = 0.20 * decay * crit_factor
+                effective_risk = 0.20 * decay * crit_factor * dep_factor
                 dimensions["Vertrag"] *= 1 - effective_risk
                 risk_details.append(
-                    f"- [Vertrag] Lange Vertragslaufzeit ({duration} Mon.) bei '{target_display}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
+                    f"- [Vertrag] Lange Vertragslaufzeit ({duration} Mon.) bei '{target_display}' (Tiefe {depth}, Modus: {dep_mode}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
                 )
             elif duration >= 13:
-                effective_risk = 0.10 * decay * crit_factor
+                effective_risk = 0.10 * decay * crit_factor * dep_factor
                 dimensions["Vertrag"] *= 1 - effective_risk
                 risk_details.append(
-                    f"- [Vertrag] Erhöhte Vertragslaufzeit ({duration} Mon.) bei '{target_display}' (Tiefe {depth}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
+                    f"- [Vertrag] Erhöhte Vertragslaufzeit ({duration} Mon.) bei '{target_display}' (Tiefe {depth}, Modus: {dep_mode}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
                 )
 
     overall_score = sum(dimensions[k] * weights[k] for k in dimensions) * 100
@@ -162,7 +169,7 @@ def get_chunk_content(chunk_id: str) -> str:
 
 def get_entity_description(entity_id: str) -> str:
     """
-    Retrieves the description TextChunk for a given entity ID.
+    Retrieves the description TextChunks for a given entity ID.
     """
     logger.info(f"Retrieving entity description for entity_id: {entity_id}")
     query = cast(
@@ -173,12 +180,18 @@ def get_entity_description(entity_id: str) -> str:
         """,
     )
     with driver.session() as session:
-        result = session.run(query, entity_id=entity_id).single()
+        results = session.run(query, entity_id=entity_id).data()
 
-    if not result:
+    if not results:
         return f"Keine Beschreibung (TextChunk) für Entity ID {entity_id} gefunden."
 
-    return f"Chunk ID: {result['id']}\nTitel: {result.get('title', 'Kein Titel')}\nBeschreibung: {result['content']}"
+    descriptions = []
+    for result in results:
+        descriptions.append(
+            f"Chunk ID: {result['id']}\nTitel: {result.get('title', 'Kein Titel')}\nBeschreibung: {result['content']}"
+        )
+
+    return "\n\n".join(descriptions)
 
 
 def execute_custom_cypher(query: str) -> str:

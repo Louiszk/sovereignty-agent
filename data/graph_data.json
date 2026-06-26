@@ -77,7 +77,8 @@
         "name": "Amazon Web Services (AWS)",
         "hq_country": "USA",
         "provider_type": "Cloud",
-        "is_internal": false
+        "is_internal": false,
+        "criticality": "High"
       }
     },
     {
@@ -87,7 +88,8 @@
         "name": "EU-SecCloud GmbH",
         "hq_country": "Germany",
         "provider_type": "Cloud",
-        "is_internal": false
+        "is_internal": false,
+        "criticality": "Medium"
       }
     },
     {
@@ -97,7 +99,8 @@
         "name": "Microsoft Azure",
         "hq_country": "USA",
         "provider_type": "Cloud",
-        "is_internal": false
+        "is_internal": false,
+        "criticality": "High"
       }
     },
     {
@@ -107,7 +110,8 @@
         "name": "On-Premise Frankfurt",
         "hq_country": "Germany",
         "provider_type": "Datacenter",
-        "is_internal": false
+        "is_internal": false,
+        "criticality": "High"
       }
     },
     {
@@ -198,7 +202,8 @@
       "label": "DEPENDS_ON",
       "properties": {
         "lock_in_level": "Low",
-        "data_residency": "EU"
+        "data_residency": "EU",
+        "dependency_mode": "optional"
       }
     },
     {
@@ -207,7 +212,8 @@
       "label": "DEPENDS_ON",
       "properties": {
         "lock_in_level": "Medium",
-        "data_residency": "EU"
+        "data_residency": "EU",
+        "dependency_mode": "required"
       }
     },
     {
@@ -216,7 +222,8 @@
       "label": "DEPENDS_ON",
       "properties": {
         "lock_in_level": "High",
-        "data_residency": "USA"
+        "data_residency": "USA",
+        "dependency_mode": "required"
       }
     },
     {
@@ -227,7 +234,8 @@
         "lock_in_level": "High",
         "data_residency": "EU",
         "contract_duration_months": 24,
-        "provenance_chunk_id": "CHK-101"
+        "provenance_chunk_id": "CHK-101",
+        "dependency_mode": "required"
       }
     },
     {
@@ -237,7 +245,8 @@
       "properties": {
         "lock_in_level": "High",
         "data_residency": "USA",
-        "provenance_chunk_id": "CHK-103"
+        "provenance_chunk_id": "CHK-103",
+        "dependency_mode": "required"
       }
     },
     {
@@ -246,7 +255,8 @@
       "label": "DEPENDS_ON",
       "properties": {
         "lock_in_level": "Low",
-        "data_residency": "EU"
+        "data_residency": "EU",
+        "dependency_mode": "degraded"
       }
     },
     {
@@ -256,7 +266,8 @@
       "properties": {
         "lock_in_level": "Low",
         "data_residency": "EU",
-        "provenance_chunk_id": "CHK-102"
+        "provenance_chunk_id": "CHK-102",
+        "dependency_mode": "required"
       }
     },
     {
@@ -265,7 +276,8 @@
       "label": "RUNS_ON",
       "properties": {
         "lock_in_level": "Medium",
-        "data_residency": "EU"
+        "data_residency": "EU",
+        "dependency_mode": "required"
       }
     },
     {
@@ -333,6 +345,16 @@
       "target": "CHK-PROV2-DESC",
       "label": "DESCRIBED_BY",
       "properties": {}
+    },
+    {
+      "source": "SVC-1",
+      "target": "PROV-2",
+      "label": "RUNS_ON",
+      "properties": {
+        "lock_in_level": "Low",
+        "data_residency": "EU",
+        "dependency_mode": "fallback"
+      }
     }
   ]
 }
