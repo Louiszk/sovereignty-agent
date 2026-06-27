@@ -1,8 +1,10 @@
+from backend.config import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
+
 import os
 import json
 from typing import cast, LiteralString
 from neo4j import GraphDatabase
-from backend.config import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD
+from langchain_openai import OpenAIEmbeddings
 
 # Path to Graph Data
 DATA_PATH = os.getenv("DATA_PATH", "/app/data/graph_data.json")
@@ -77,6 +79,43 @@ def init_db():
             """)
         except Exception as e:
             print(f"Warning: Index creation failed (might already exist): {e}")
+
+        # Create Vector Index for Dense Search
+        print("Creating Vector Index for TextChunks...")
+        try:
+            session.run("""
+            CREATE VECTOR INDEX vector_index IF NOT EXISTS 
+            FOR (n:TextChunk) ON (n.embedding) 
+            OPTIONS {indexConfig: {
+                `vector.dimensions`: 1536,
+                `vector.similarity_function`: 'cosine'
+            }}
+            """)
+        except Exception as e:
+            print(f"Warning: Vector Index creation failed: {e}")
+
+        # Generate embeddings for TextChunks
+        try:
+            embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+
+            chunks = session.run(
+                "MATCH (n:TextChunk) WHERE n.embedding IS NULL RETURN id(n) AS node_id, n.content AS content, n.title AS title"
+            ).data()
+            if chunks:
+                print(f"Generating embeddings for {len(chunks)} TextChunks...")
+                for chunk in chunks:
+                    text_to_embed = f"{chunk.get('title', '')}\n{chunk.get('content', '')}"
+                    emb = embeddings.embed_query(text_to_embed)
+                    session.run(
+                        "MATCH (n:TextChunk) WHERE id(n) = $node_id SET n.embedding = $emb",
+                        node_id=chunk["node_id"],
+                        emb=emb,
+                    )
+                print("Finished generating embeddings.")
+            else:
+                print("No chunks require embeddings.")
+        except Exception as e:
+            print(f"Warning: Could not generate embeddings: {e}")
 
     driver.close()
     print("Graph initialized successfully!")

@@ -21,6 +21,7 @@ The agent is equipped with the following specific tools to solve user queries:
 - `read_entity_description`: Retrieves detailed system or provider descriptions.
 - `execute_cypher_query`: Autonomously generates and executes read-only Cypher queries against the Neo4j graph.
 - `sparse_search`: Performs full-text keyword searches (BM25) across all TextChunks.
+- `dense_search`: Performs semantic vector searches across documents based on questions or hypothetical statements.
 
 ## Technology Stack
 

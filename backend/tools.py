@@ -5,6 +5,7 @@ import tiktoken
 from neo4j import GraphDatabase, unit_of_work
 from backend.config import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, CYPHER_DEPTH_LIMIT
 import logging
+from langchain_openai import OpenAIEmbeddings
 
 logger = logging.getLogger(__name__)
 encoder = tiktoken.get_encoding("o200k_base")
@@ -312,13 +313,59 @@ def keyword_search(keywords: list[str]) -> str:
     return "\n---\n".join(formatted_results)
 
 
-# TODO: Implement Dense Search (Vector Search)
-# def vector_search(query: str) -> str:
-#     """
-#     Executes a semantic vector search across document embeddings.
-#     Requires an embedding model (e.g., text-embedding-3-small) and vector index setup in Neo4j.
-#     """
-#     # 1. Generate embedding for the query string
-#     # 2. CALL db.index.vector.queryNodes("vector_index", 3, $query_embedding) YIELD node, score
-#     # 3. RETURN the most similar chunks and their scores
-#     pass
+def vector_search(query: str) -> str:
+    """
+    Executes a semantic vector search across document embeddings.
+    Requires an embedding model (e.g., text-embedding-3-small) and vector index setup in Neo4j.
+    """
+    if not query:
+        return "FEHLER: Keine Suchanfrage angegeben."
+
+    logger.info(f"Executing dense search for: {query}")
+
+    try:
+        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+        query_embedding = embeddings.embed_query(query)
+    except Exception as e:
+        logger.error(f"Error generating embedding: {e}")
+        return f"FEHLER beim Generieren des Embeddings: {e}"
+
+    cypher_query = cast(
+        LiteralString,
+        """
+        CALL db.index.vector.queryNodes("vector_index", 3, $query_embedding) YIELD node, score
+        RETURN node.id AS id, node.title AS title, node.type AS type, node.content AS content, node.source_file AS source_file, score
+        """,
+    )
+
+    try:
+        with driver.session() as session:
+            result = session.run(cypher_query, query_embedding=query_embedding).data()
+
+        if not result:
+            return f"Keine relevanten Dokumente für die Suchanfrage '{query}' gefunden."
+
+        formatted_results = []
+        for r in result:
+            connected_query = cast(
+                LiteralString,
+                "MATCH (c:TextChunk {id: $chunk_id})-[:RELATES_TO|DESCRIBED_BY]-(related) RETURN collect(related.name) AS related_entities",
+            )
+            with driver.session() as session:
+                conn_res = session.run(connected_query, chunk_id=r["id"]).single()
+
+            related = conn_res["related_entities"] if conn_res else []
+            related_str = f"Verknüpft mit: {', '.join(related)}" if related else "Keine direkten Verknüpfungen"
+
+            source_info = f"\nQuelle: {r['source_file']}" if r.get("source_file") else ""
+            formatted_results.append(
+                f"Chunk ID: {r['id']} (Score: {r['score']:.2f})\n"
+                f"Titel: {r['title']} ({r['type']}){source_info}\n"
+                f"{related_str}\n"
+                f"Inhalt: {r['content']}\n"
+            )
+
+        return "\n---\n".join(formatted_results)
+    except Exception as e:
+        logger.error(f"Execution Error during vector search: {e}")
+        return f"FEHLER bei der Ausführung der Vektorsuche: {e}"

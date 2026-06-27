@@ -4,6 +4,7 @@ from backend.tools import (
     get_entity_description,
     execute_custom_cypher,
     keyword_search,
+    vector_search,
 )
 from backend.utils import get_dynamic_schema, execute_tool_calls
 from backend.prompts import get_system_prompt
@@ -74,16 +75,24 @@ def sparse_search(keywords: list[str]) -> str:
     return keyword_search(keywords)
 
 
-# TODO: Implement dense vector search using embeddings
-# @tool
-# def dense_search(query: str) -> str:
-#     """
-#     Nutze dieses Tool, um eine semantische Suche (Vector Search) in Texten durchzuführen.
-#     """
-#     # return vector_search(query)
-#     pass
+@tool
+def dense_search(query: str) -> str:
+    """
+    Nutze dieses Tool, um eine semantische Suche (Vector Search) in Texten durchzuführen.
+    Formuliere die Suchanfrage als Frage oder als Aussagesatz.
+    Beispiel-Query: 'Die Kündigungsfrist für den Cloud-Service beträgt 3 Monate.'
+    """
+    return vector_search(query)
 
-tools = [get_entity_score, read_evidence_chunk, read_entity_description, execute_cypher_query, sparse_search]
+
+tools = [
+    get_entity_score,
+    read_evidence_chunk,
+    read_entity_description,
+    execute_cypher_query,
+    sparse_search,
+    dense_search,
+]
 tool_map = {tool.name: tool for tool in tools}
 
 # Initialize LLM and bind tools
