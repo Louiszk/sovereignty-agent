@@ -18,7 +18,6 @@ from langgraph.graph.message import add_messages
 from langgraph.checkpoint.memory import MemorySaver
 import tiktoken
 import logging
-import concurrent.futures
 from langgraph.errors import GraphRecursionError
 
 logger = logging.getLogger(__name__)
@@ -88,7 +87,7 @@ tools = [get_entity_score, read_evidence_chunk, read_entity_description, execute
 tool_map = {tool.name: tool for tool in tools}
 
 # Initialize LLM and bind tools
-llm = ChatOpenAI(model="gpt-5.4-mini", temperature=0)
+llm = ChatOpenAI(model="gpt-5.4-mini", temperature=0, timeout=60.0, max_retries=2)
 llm_with_tools = llm.bind_tools(tools)
 
 
@@ -169,13 +168,8 @@ def chat_with_agent(user_message: str, session_id: str = "default") -> str:
 
     logger.info("Invoking LangGraph executor...")
     try:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(lambda: agent_executor.invoke(inputs, config=config))
-            final_state = future.result(timeout=120.0)
+        final_state = agent_executor.invoke(inputs, config=config)
         logger.info("LangGraph execution completed.")
-    except concurrent.futures.TimeoutError:
-        logger.error(f"Agent execution timed out after 120s for session '{session_id}'")
-        return "FEHLER: Der Agent hat zu lange für eine Antwort gebraucht (Timeout nach 120 Sekunden). Bitte versuche es noch einmal."
     except GraphRecursionError:
         logger.error(f"Agent hit recursion limit ({AGENT_RECURSION_LIMIT}) for session '{session_id}'")
         return "FEHLER: Der Agent hat das interne Iterations-Limit erreicht. Bitte teile deine Anfrage in kleinere, spezifischere Fragen auf."

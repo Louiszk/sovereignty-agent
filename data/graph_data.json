@@ -110,7 +110,7 @@
         "name": "On-Premise Frankfurt",
         "hq_country": "Germany",
         "provider_type": "Datacenter",
-        "is_internal": false,
+        "is_internal": true,
         "criticality": "High"
       }
     },

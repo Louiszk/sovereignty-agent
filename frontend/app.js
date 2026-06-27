@@ -132,9 +132,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const sourceText = data.source_file ? ` (${data.source_file})` : '';
             
             modalBody.innerHTML = `
-                <h2 style="color: #ffffff; margin-top: 0; margin-bottom: 5px;">${data.title}</h2>
-                <div style="color: #cccccc; margin-bottom: 20px; font-size: 0.9em;">${data.type}${sourceText}</div>
-                <div style="color: #ffffff; line-height: 1.5; white-space: pre-wrap;">${data.content}</div>
+                <h2 style="color: #ffffff; margin-top: 0; margin-bottom: 5px;">${DOMPurify.sanitize(data.title)}</h2>
+                <div style="color: #cccccc; margin-bottom: 20px; font-size: 0.9em;">${DOMPurify.sanitize(data.type)}${DOMPurify.sanitize(sourceText)}</div>
+                <div style="color: #ffffff; line-height: 1.5; white-space: pre-wrap;">${DOMPurify.sanitize(data.content)}</div>
             `;
         } catch (e) {
             modalBody.textContent = 'Fehler beim Laden des Chunks.';

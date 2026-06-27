@@ -2,8 +2,7 @@ from typing import cast, LiteralString
 import json
 import neo4j.exceptions
 import tiktoken
-import concurrent.futures
-from neo4j import GraphDatabase
+from neo4j import GraphDatabase, unit_of_work
 from backend.config import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, CYPHER_DEPTH_LIMIT
 import logging
 
@@ -77,7 +76,7 @@ def calculate_sovereignty_score(entity_id: str) -> str:
         target_display = f"{target_name} ({ownership_str})"
 
         chunk_id = rel.get("provenance_chunk_id")
-        chunk_ref = f" (Beleg: {chunk_id})" if chunk_id else ""
+        chunk_ref = f" [[{chunk_id}]]" if chunk_id else ""
 
         decays = {k: v ** (depth - 1) for k, v in decay_bases.items()}
         crit_str = item.get("source_criticality", "High")
@@ -99,7 +98,7 @@ def calculate_sovereignty_score(entity_id: str) -> str:
             risk_details.append(
                 f"- [Regulatorik] Daten in den USA bei '{target_display}' (Tiefe {depth}, Modus: {dep_mode}). Score-Abzug: {effective_risk * 100:.1f}%{chunk_ref}"
             )
-            
+
         jurisdiction = rel.get("jurisdiction")
         if jurisdiction == "USA":
             effective_risk = 0.40 * decays["Geopolitik"] * crit_factor * dep_factor
@@ -214,10 +213,11 @@ def execute_custom_cypher(query: str) -> str:
     # Simple static check for obvious write commands
     upper_query = query.upper()
     if any(
-        forbidden in upper_query for forbidden in ["CREATE", "SET", "DELETE", "REMOVE", "DROP", "MERGE", "CALL apoc"]
+        forbidden in upper_query for forbidden in ["CREATE", "SET", "DELETE", "REMOVE", "DROP", "MERGE", "CALL APOC"]
     ):
         return "FEHLER: Schreiboperationen sind aus Sicherheitsgründen in diesem Tool blockiert."
 
+    @unit_of_work(timeout=20.0)
     def _read_tx(tx):
         result = tx.run(query)
         data = []
@@ -237,10 +237,7 @@ def execute_custom_cypher(query: str) -> str:
             return session.execute_read(_read_tx)
 
     try:
-        # Strict Python-level timeout to guarantee the agent never hangs
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(_run_query)
-            results = future.result(timeout=20.0)
+        results = _run_query()
 
         if not results:
             return (
@@ -256,9 +253,6 @@ def execute_custom_cypher(query: str) -> str:
 
         return json_output
 
-    except concurrent.futures.TimeoutError:
-        logger.error(f"Cypher Query Timeout: {query}")
-        return "FEHLER: Die Ausführung der Cypher-Query hat zu lange gedauert (> 20 Sekunden) und wurde abgebrochen. Wahrscheinlich war die Query zu komplex."
     except neo4j.exceptions.ClientError as e:
         logger.error(f"Cypher Syntax/Client Error: {e}")
         return f"FEHLER in der Cypher-Query: {e}"
