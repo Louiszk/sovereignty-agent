@@ -12,6 +12,8 @@ An AI agent for analyzing and evaluating the digital sovereignty of IT architect
   - **Contract:** Contract durations and flexibility.
 - **Interactive Chat:** Web interface for conversations with the OpenAI based agent.
 
+<img src="docs/schema.png" width="600" alt="Sovereignty Agent Schema">
+
 ## Agent Tools
 
 The agent is equipped with the following specific tools to solve user queries:
