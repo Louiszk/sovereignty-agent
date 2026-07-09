@@ -7,8 +7,8 @@ on:
     branches: [ "main", "master" ]
 
 jobs:
-  lint-and-typecheck:
-    name: Lint & Type Check
+  test-lint-and-typecheck:
+    name: Test, Lint & Type Check
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -25,8 +25,7 @@ jobs:
           python -m venv sovvenv
           source sovvenv/bin/activate
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install ruff pyright
+          pip install -r requirements-dev.txt
 
       - name: Check code formatting with Ruff
         run: |
@@ -42,3 +41,8 @@ jobs:
         run: |
           source sovvenv/bin/activate
           pyright .
+
+      - name: Run tests with pytest
+        run: |
+          source sovvenv/bin/activate
+          pytest

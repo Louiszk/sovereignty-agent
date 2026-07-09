@@ -5,3 +5,7 @@ line-length = 120
 typeCheckingMode = "standard"
 venvPath = "."
 venv = "sovvenv"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
